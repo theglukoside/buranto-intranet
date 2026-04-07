@@ -14,20 +14,52 @@ echo "  Buranto Intranet — Update"
 echo "═══════════════════════════════════════"
 echo ""
 
-# 1. Repo klonen
+# 1. Repo klonen via Docker (git ist auf Synology nicht immer verfügbar)
 echo "→ Lade neueste Version von GitHub..."
-git clone --depth 1 "$REPO_URL" "$TMP_DIR" 2>&1
+mkdir -p "$TMP_DIR"
+docker run --rm -v "$TMP_DIR:/repo" alpine/git clone --depth 1 "$REPO_URL" /repo 2>&1
 
-# 2. Quelldateien aktualisieren (nicht SSL-Zertifikate oder Daten überschreiben)
+# 2. Quelldateien aktualisieren (SSL-Zertifikate und Daten nicht überschreiben)
 echo "→ Aktualisiere Dateien..."
-rsync -av --exclude='nginx/ssl/' --exclude='.git/' --exclude='node_modules/' --exclude='dist/' "$TMP_DIR/" "$DEPLOY_DIR/" 2>&1
+
+# Server-Code
+cp "$TMP_DIR/app/server/routes.ts" "$DEPLOY_DIR/app/server/routes.ts"
+cp "$TMP_DIR/app/server/storage.ts" "$DEPLOY_DIR/app/server/storage.ts"
+cp "$TMP_DIR/app/server/index.ts" "$DEPLOY_DIR/app/server/index.ts"
+cp "$TMP_DIR/app/server/static.ts" "$DEPLOY_DIR/app/server/static.ts"
+cp "$TMP_DIR/app/server/vite.ts" "$DEPLOY_DIR/app/server/vite.ts"
+
+# Client-Code
+cp -r "$TMP_DIR/app/client/src/" "$DEPLOY_DIR/app/client/src/"
+
+# Shared
+cp "$TMP_DIR/app/shared/schema.ts" "$DEPLOY_DIR/app/shared/schema.ts"
+
+# Build-Config
+cp "$TMP_DIR/app/Dockerfile" "$DEPLOY_DIR/app/Dockerfile"
+cp "$TMP_DIR/app/package.json" "$DEPLOY_DIR/app/package.json"
+cp "$TMP_DIR/app/package-lock.json" "$DEPLOY_DIR/app/package-lock.json"
+cp "$TMP_DIR/app/vite.config.ts" "$DEPLOY_DIR/app/vite.config.ts"
+cp "$TMP_DIR/app/tsconfig.json" "$DEPLOY_DIR/app/tsconfig.json"
+cp "$TMP_DIR/app/tailwind.config.ts" "$DEPLOY_DIR/app/tailwind.config.ts"
+cp "$TMP_DIR/app/postcss.config.js" "$DEPLOY_DIR/app/postcss.config.js"
+cp "$TMP_DIR/app/drizzle.config.ts" "$DEPLOY_DIR/app/drizzle.config.ts"
+cp "$TMP_DIR/app/components.json" "$DEPLOY_DIR/app/components.json"
+cp "$TMP_DIR/app/script/build.ts" "$DEPLOY_DIR/app/script/build.ts"
+
+# Docker & Nginx Config
+cp "$TMP_DIR/docker-compose.yml" "$DEPLOY_DIR/docker-compose.yml"
+cp "$TMP_DIR/nginx/default.conf" "$DEPLOY_DIR/nginx/default.conf"
+
+# Update-Script selbst aktualisieren
+cp "$TMP_DIR/update.sh" "$DEPLOY_DIR/update.sh"
 
 # 3. Container neu bauen
 echo "→ Stoppe Container..."
 cd "$DEPLOY_DIR"
 docker compose down
 
-echo "→ Baue Container neu..."
+echo "→ Baue Container neu (dauert ca. 2-3 Minuten)..."
 docker compose build intranet --no-cache
 
 echo "→ Starte Container..."
