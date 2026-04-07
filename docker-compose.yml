@@ -47,26 +47,6 @@ services:
     networks:
       - buranto-net
 
-  # ---- Digitalstrom Bridge (optional) ----
-  ds-bridge:
-    build:
-      context: ./digitalstrom-bridge
-      dockerfile: Dockerfile
-    container_name: buranto-ds-bridge
-    restart: always
-    environment:
-      - SUPABASE_URL=${VITE_SUPABASE_URL}
-      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
-      - DSS_HOST=192.168.1.129
-      - DSS_PORT=8080
-      - DSS_USER=dssadmin
-      - DSS_PASSWORD=brdss
-      - POLL_INTERVAL=10000
-    networks:
-      - buranto-net
-      - host-bridge
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
 volumes:
   intranet-data:
