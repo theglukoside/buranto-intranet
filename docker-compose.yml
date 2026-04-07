@@ -1,0 +1,81 @@
+# ============================================
+# Buranto Intranet — Docker Compose für Synology DS225
+# Services: Intranet App + Nginx Reverse Proxy
+# ============================================
+
+services:
+  # ---- Buranto Intranet (Node.js/Express) ----
+  intranet:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: buranto-intranet
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    volumes:
+      - intranet-data:/app/data
+      - intranet-uploads:/app/uploads
+    networks:
+      - buranto-net
+      - host-bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ---- Nginx Reverse Proxy mit SSL ----
+  nginx:
+    image: nginx:alpine
+    container_name: buranto-nginx
+    restart: always
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      intranet:
+        condition: service_healthy
+    networks:
+      - buranto-net
+
+  # ---- Digitalstrom Bridge (optional) ----
+  ds-bridge:
+    build:
+      context: ./digitalstrom-bridge
+      dockerfile: Dockerfile
+    container_name: buranto-ds-bridge
+    restart: always
+    environment:
+      - SUPABASE_URL=${VITE_SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - DSS_HOST=192.168.1.129
+      - DSS_PORT=8080
+      - DSS_USER=dssadmin
+      - DSS_PASSWORD=brdss
+      - POLL_INTERVAL=10000
+    networks:
+      - buranto-net
+      - host-bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  intranet-data:
+    driver: local
+  intranet-uploads:
+    driver: local
+
+networks:
+  buranto-net:
+    driver: bridge
+  host-bridge:
+    driver: bridge
