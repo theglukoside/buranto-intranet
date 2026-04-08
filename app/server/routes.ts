@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import http from "http";
 import crypto from "crypto";
 import { fetchPorscheData, fetchBmwData, getPorscheCache, getBmwCache } from "./vehicle-api";
+import { getSonosCache, discoverSonos, sonosPlay, sonosPause, sonosNext, sonosPrevious, sonosSetVolume, sonosSetMute } from "./sonos-api";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -259,6 +260,50 @@ export async function registerRoutes(
     } catch {
       res.json({ reachable: false });
     }
+  });
+
+  // ─── Sonos API ────────────────────────────────────────────────────────────
+
+  app.get("/api/sonos/zones", (_req, res) => {
+    res.json(getSonosCache());
+  });
+
+  app.post("/api/sonos/discover", async (_req, res) => {
+    const result = await discoverSonos();
+    res.json(result);
+  });
+
+  app.post("/api/sonos/zones/:ip/play", async (req, res) => {
+    try { await sonosPlay(req.params.ip); res.json({ ok: true }); }
+    catch (e: any) { res.status(502).json({ error: e?.message }); }
+  });
+
+  app.post("/api/sonos/zones/:ip/pause", async (req, res) => {
+    try { await sonosPause(req.params.ip); res.json({ ok: true }); }
+    catch (e: any) { res.status(502).json({ error: e?.message }); }
+  });
+
+  app.post("/api/sonos/zones/:ip/next", async (req, res) => {
+    try { await sonosNext(req.params.ip); res.json({ ok: true }); }
+    catch (e: any) { res.status(502).json({ error: e?.message }); }
+  });
+
+  app.post("/api/sonos/zones/:ip/previous", async (req, res) => {
+    try { await sonosPrevious(req.params.ip); res.json({ ok: true }); }
+    catch (e: any) { res.status(502).json({ error: e?.message }); }
+  });
+
+  app.post("/api/sonos/zones/:ip/volume", async (req, res) => {
+    const { volume } = req.body;
+    if (volume === undefined) return res.status(400).json({ error: "volume erforderlich" });
+    try { await sonosSetVolume(req.params.ip, parseInt(volume)); res.json({ ok: true }); }
+    catch (e: any) { res.status(502).json({ error: e?.message }); }
+  });
+
+  app.post("/api/sonos/zones/:ip/mute", async (req, res) => {
+    const { muted } = req.body;
+    try { await sonosSetMute(req.params.ip, Boolean(muted)); res.json({ ok: true }); }
+    catch (e: any) { res.status(502).json({ error: e?.message }); }
   });
 
   // ─── Vehicle APIs ────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import {
   Zap,
   Video,
   BatteryCharging,
+  Music,
   Car,
   CalendarDays,
   FolderOpen,
@@ -32,6 +33,7 @@ const mainItems = [
   { title: "Strom", url: "/strom", icon: Zap },
   { title: "Videoanlage", url: "/videoanlage", icon: Video },
   { title: "Wallbox", url: "/wallbox", icon: BatteryCharging },
+  { title: "Sonos", url: "/sonos", icon: Music },
   { title: "Fahrzeuge", url: "/fahrzeuge", icon: Car },
 ];
 

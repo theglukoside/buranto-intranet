@@ -20,6 +20,7 @@ import Digitalstrom from "@/pages/digitalstrom";
 import Strom from "@/pages/strom";
 import Videoanlage from "@/pages/videoanlage";
 import Wallbox from "@/pages/wallbox";
+import Sonos from "@/pages/sonos";
 import Fahrzeuge from "@/pages/fahrzeuge";
 import Termine from "@/pages/termine";
 import Dokumente from "@/pages/dokumente";
@@ -44,6 +45,7 @@ function AppRouter() {
       <Route path="/strom" component={Strom} />
       <Route path="/videoanlage" component={Videoanlage} />
       <Route path="/wallbox" component={Wallbox} />
+      <Route path="/sonos" component={Sonos} />
       <Route path="/fahrzeuge" component={Fahrzeuge} />
       <Route path="/termine" component={Termine} />
       <Route path="/dokumente" component={Dokumente} />
