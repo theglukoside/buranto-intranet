@@ -22,30 +22,12 @@ docker run --rm -v "$TMP_DIR:/repo" alpine/git clone --depth 1 "$REPO_URL" /repo
 # 2. Quelldateien aktualisieren (SSL-Zertifikate und Daten nicht überschreiben)
 echo "→ Aktualisiere Dateien..."
 
-# Server-Code
-cp "$TMP_DIR/app/server/routes.ts" "$DEPLOY_DIR/app/server/routes.ts"
-cp "$TMP_DIR/app/server/storage.ts" "$DEPLOY_DIR/app/server/storage.ts"
-cp "$TMP_DIR/app/server/index.ts" "$DEPLOY_DIR/app/server/index.ts"
-cp "$TMP_DIR/app/server/static.ts" "$DEPLOY_DIR/app/server/static.ts"
-cp "$TMP_DIR/app/server/vite.ts" "$DEPLOY_DIR/app/server/vite.ts"
-
-# Client-Code
-cp -r "$TMP_DIR/app/client/src/" "$DEPLOY_DIR/app/client/src/"
-
-# Shared
-cp "$TMP_DIR/app/shared/schema.ts" "$DEPLOY_DIR/app/shared/schema.ts"
-
-# Build-Config
-cp "$TMP_DIR/app/Dockerfile" "$DEPLOY_DIR/app/Dockerfile"
-cp "$TMP_DIR/app/package.json" "$DEPLOY_DIR/app/package.json"
-cp "$TMP_DIR/app/package-lock.json" "$DEPLOY_DIR/app/package-lock.json"
-cp "$TMP_DIR/app/vite.config.ts" "$DEPLOY_DIR/app/vite.config.ts"
-cp "$TMP_DIR/app/tsconfig.json" "$DEPLOY_DIR/app/tsconfig.json"
-cp "$TMP_DIR/app/tailwind.config.ts" "$DEPLOY_DIR/app/tailwind.config.ts"
-cp "$TMP_DIR/app/postcss.config.js" "$DEPLOY_DIR/app/postcss.config.js"
-cp "$TMP_DIR/app/drizzle.config.ts" "$DEPLOY_DIR/app/drizzle.config.ts"
-cp "$TMP_DIR/app/components.json" "$DEPLOY_DIR/app/components.json"
-cp "$TMP_DIR/app/script/build.ts" "$DEPLOY_DIR/app/script/build.ts"
+# Gesamter app-Ordner (ausser node_modules und dist)
+rsync -a --delete \
+  --exclude='node_modules/' \
+  --exclude='dist/' \
+  --exclude='.env' \
+  "$TMP_DIR/app/" "$DEPLOY_DIR/app/"
 
 # Docker & Nginx Config
 cp "$TMP_DIR/docker-compose.yml" "$DEPLOY_DIR/docker-compose.yml"
