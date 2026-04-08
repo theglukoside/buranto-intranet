@@ -8,6 +8,7 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import http from "http";
 import crypto from "crypto";
+import { fetchPorscheData, fetchBmwData, getPorscheCache, getBmwCache } from "./vehicle-api";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -258,6 +259,51 @@ export async function registerRoutes(
     } catch {
       res.json({ reachable: false });
     }
+  });
+
+  // ─── Vehicle APIs ────────────────────────────────────────────────────────────
+  // Porsche Connect — cached vehicle data (polls every 5 minutes)
+  app.get("/api/vehicles/porsche", async (_req, res) => {
+    const creds = await storage.getApiCredential("porsche-connect");
+    if (!creds) {
+      return res.json({ configured: false, vehicles: [], error: null });
+    }
+    const { username, password } = JSON.parse(creds.credentials);
+    if (!username || !password) {
+      return res.json({ configured: false, vehicles: [], error: null });
+    }
+    const cache = await fetchPorscheData(username, password);
+    res.json({ configured: true, vehicles: cache.data, lastFetch: cache.lastFetch, error: cache.error });
+  });
+
+  app.post("/api/vehicles/porsche/refresh", async (_req, res) => {
+    const creds = await storage.getApiCredential("porsche-connect");
+    if (!creds) return res.status(400).json({ error: "Keine Zugangsdaten konfiguriert" });
+    const { username, password } = JSON.parse(creds.credentials);
+    const cache = await fetchPorscheData(username, password, true);
+    res.json({ configured: true, vehicles: cache.data, lastFetch: cache.lastFetch, error: cache.error });
+  });
+
+  // BMW/Mini Connected Drive
+  app.get("/api/vehicles/bmw", async (_req, res) => {
+    const creds = await storage.getApiCredential("bmw-connected");
+    if (!creds) {
+      return res.json({ configured: false, vehicles: [], error: null });
+    }
+    const { username, password, region } = JSON.parse(creds.credentials);
+    if (!username || !password) {
+      return res.json({ configured: false, vehicles: [], error: null });
+    }
+    const cache = await fetchBmwData(username, password, region || "rest_of_world");
+    res.json({ configured: true, vehicles: cache.data, lastFetch: cache.lastFetch, error: cache.error });
+  });
+
+  app.post("/api/vehicles/bmw/refresh", async (_req, res) => {
+    const creds = await storage.getApiCredential("bmw-connected");
+    if (!creds) return res.status(400).json({ error: "Keine Zugangsdaten konfiguriert" });
+    const { username, password, region } = JSON.parse(creds.credentials);
+    const cache = await fetchBmwData(username, password, region || "rest_of_world", true);
+    res.json({ configured: true, vehicles: cache.data, lastFetch: cache.lastFetch, error: cache.error });
   });
 
   // Settings

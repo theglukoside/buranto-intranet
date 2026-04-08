@@ -219,20 +219,20 @@ const services: ServiceConfig[] = [
     ],
   },
   {
-    service: "porsche",
-    label: "Porsche Connect",
+    service: "porsche-connect",
+    label: "Porsche Connect (Taycan & Cayenne)",
     icon: Car,
     fields: [
-      { key: "email", label: "E-Mail", type: "email" },
+      { key: "username", label: "Porsche ID E-Mail", type: "email" },
       { key: "password", label: "Passwort", type: "password" },
     ],
   },
   {
-    service: "mini",
-    label: "Mini Connected",
+    service: "bmw-connected",
+    label: "BMW Connected Drive (Mini JCW)",
     icon: Car,
     fields: [
-      { key: "email", label: "E-Mail", type: "email" },
+      { key: "username", label: "MyMINI E-Mail", type: "email" },
       { key: "password", label: "Passwort", type: "password" },
     ],
   },
