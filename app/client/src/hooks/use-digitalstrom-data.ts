@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { createContext, useContext, type ReactNode } from "react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Matching server/dss-api.ts types
@@ -183,3 +184,18 @@ export async function setDeviceOutput(dsuid: string, value: number): Promise<voi
 
 // Keep legacy type alias
 export type DssMeter = DsMeter;
+
+// Legacy context hook — credentials now hardcoded server-side, always configured
+export function useDigitalstromContext() {
+  const { reachable, error } = useDigitalstromStatus();
+  return {
+    configured: true,
+    reachable,
+    error,
+  };
+}
+
+// Legacy Provider — just renders children (no context needed anymore)
+export function DigitalstromProvider({ children }: { children: ReactNode }) {
+  return children as any;
+}
