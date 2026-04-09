@@ -8,6 +8,8 @@ import {
   Thermometer, Wrench,
 } from "lucide-react";
 import { useOpenWBData } from "@/hooks/use-openwb-data";
+import { Link } from "wouter";
+
 // Vehicle data type (mirrored from server/vehicle-api.ts)
 interface VehicleApiData {
   vin: string;
@@ -37,7 +39,6 @@ interface VehicleApiData {
   lastUpdated: Date;
   error?: string;
 }
-import { Link } from "wouter";
 
 // ─── Static vehicle configuration ─────────────────────────────────────────────
 // Matches API data by model keywords
