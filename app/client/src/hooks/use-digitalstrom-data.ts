@@ -1,214 +1,185 @@
-import { useState, useEffect, useRef, createContext, useContext, createElement, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-// ─── Configuration ──────────────────────────────────────────────────────────
-// Direct REST API calls to Supabase PostgREST — no @supabase/supabase-js needed.
-// This avoids bundling the auth module which references localStorage/sessionStorage.
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
+// Matching server/dss-api.ts types
 
 export interface DsZone {
   id: number;
   name: string;
   temperature: number | null;
   humidity: number | null;
-  consumption_w: number;
-  updated_at: string;
+  consumptionW: number;
+  // Legacy Supabase compat fields
+  consumption_w?: number;
+  updated_at?: string;
 }
 
 export interface DsDevice {
   dsuid: string;
   name: string;
-  zone_id: number | null;
-  is_on: boolean;
-  output_value: number;
-  device_type: string | null;
-  meter_dsuid: string | null;
-  updated_at: string;
+  zoneId: number | null;
+  isOn: boolean;
+  outputValue: number;
+  deviceType: string | null;
+  meterDsuid: string | null;
+  // Legacy compat
+  zone_id?: number | null;
+  is_on?: boolean;
+  output_value?: number;
+  device_type?: string | null;
+  meter_dsuid?: string | null;
+  updated_at?: string;
 }
 
 export interface DsMeter {
   dsuid: string;
   name: string | null;
-  consumption_w: number;
-  updated_at: string;
+  consumptionW: number;
+  consumption_w?: number;
+  updated_at?: string;
 }
 
 export interface DsSystemStatus {
-  id: number;
-  dss_reachable: boolean;
-  last_poll_at: string | null;
-  last_error: string | null;
-  bridge_version: string;
-  updated_at: string;
+  reachable: boolean;
+  version: string | null;
+  lastChecked: string;
+  error: string | null;
+  token?: string | null;
+  // Legacy compat
+  dss_reachable?: boolean;
+  last_error?: string | null;
+  bridge_version?: string;
 }
 
-// ─── Supabase REST helper ───────────────────────────────────────────────────
+interface DssApiResponse {
+  status: DsSystemStatus;
+  zones: DsZone[];
+  devices: DsDevice[];
+  meters: DssMeter[];
+  lastPoll: string | null;
+}
 
-async function supabaseGet<T>(table: string, query = ""): Promise<T> {
-  const url = `${SUPABASE_URL}/rest/v1/${table}?${query}`;
-  const res = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+// ─── Local API fetcher ────────────────────────────────────────────────────────
+
+async function fetchDss(): Promise<DssApiResponse> {
+  const res = await fetch("/api/dss/status");
+  if (!res.ok) throw new Error("dSS API nicht erreichbar");
   return res.json();
 }
 
-// ─── Context ────────────────────────────────────────────────────────────────
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
-interface DigitalstromContextValue {
-  configured: boolean;
+export function useDigitalstromStatus() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/dss/status"],
+    queryFn: fetchDss,
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  });
+
+  const status = data?.status;
+  const configured = true; // Always configured — credentials are hardcoded in server
+
+  return {
+    status: status
+      ? {
+          id: 1,
+          dss_reachable: status.reachable,
+          last_poll_at: data?.lastPoll || null,
+          last_error: status.error || null,
+          bridge_version: status.version || "local",
+          updated_at: status.lastChecked,
+        }
+      : null,
+    loading: isLoading,
+    configured,
+    reachable: status?.reachable ?? false,
+    error: status?.error ?? null,
+  };
 }
 
-const DigitalstromContext = createContext<DigitalstromContextValue>({
-  configured: false,
-});
+export function useDigitalstromZones() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/dss/status"],
+    queryFn: fetchDss,
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  });
 
-export function DigitalstromProvider({ children }: { children: ReactNode }) {
-  const configured = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-  return createElement(
-    DigitalstromContext.Provider,
-    { value: { configured } },
-    children
-  );
+  // Normalize to legacy format for existing page component
+  const zones: DsZone[] = (data?.zones || []).map((z) => ({
+    ...z,
+    consumption_w: z.consumptionW,
+    updated_at: data?.lastPoll || new Date().toISOString(),
+  }));
+
+  return { zones, loading: isLoading };
 }
 
-export function useDigitalstromContext() {
-  return useContext(DigitalstromContext);
+export function useDigitalstromDevices() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/dss/status"],
+    queryFn: fetchDss,
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  });
+
+  const devices: DsDevice[] = (data?.devices || []).map((d) => ({
+    ...d,
+    zone_id: d.zoneId,
+    is_on: d.isOn,
+    output_value: d.outputValue,
+    device_type: d.deviceType,
+    meter_dsuid: d.meterDsuid,
+    updated_at: data?.lastPoll || new Date().toISOString(),
+  }));
+
+  return { devices, loading: isLoading };
 }
 
-// ─── Generic polling hook ───────────────────────────────────────────────────
+export function useDigitalstromMeters() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/dss/status"],
+    queryFn: fetchDss,
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  });
 
-function useSupabasePolling<T>(
-  fetcher: () => Promise<T | null>,
-  intervalMs = 30000
-) {
-  const { configured } = useDigitalstromContext();
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const meters: DsMeter[] = (data?.meters || []).map((m) => ({
+    ...m,
+    consumption_w: m.consumptionW,
+    updated_at: data?.lastPoll || new Date().toISOString(),
+  }));
 
-  useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      setError("Supabase nicht konfiguriert");
-      return;
-    }
-
-    const poll = async () => {
-      try {
-        const result = await fetcher();
-        setData(result);
-        setError(null);
-        setLastUpdate(new Date());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Fehler");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    poll();
-    intervalRef.current = setInterval(poll, intervalMs);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configured]);
-
-  return { data, loading, error, lastUpdate, configured };
+  return { meters, loading: isLoading };
 }
 
-// ─── useDigitalstromZones ───────────────────────────────────────────────────
+// ─── Formatters ──────────────────────────────────────────────────────────────
 
-export interface DsZonesResult {
-  zones: DsZone[];
-  loading: boolean;
-  error: string | null;
-  lastUpdate: Date | null;
-  configured: boolean;
-}
-
-export function useDigitalstromZones(): DsZonesResult {
-  const { data, loading, error, lastUpdate, configured } = useSupabasePolling<DsZone[]>(
-    () => supabaseGet<DsZone[]>("ds_zones", "select=*&order=id.asc"),
-    30000
-  );
-  return { zones: data || [], loading, error, lastUpdate, configured };
-}
-
-// ─── useDigitalstromDevices ─────────────────────────────────────────────────
-
-export interface DsDevicesResult {
-  devices: DsDevice[];
-  loading: boolean;
-  error: string | null;
-  lastUpdate: Date | null;
-  configured: boolean;
-}
-
-export function useDigitalstromDevices(): DsDevicesResult {
-  const { data, loading, error, lastUpdate, configured } = useSupabasePolling<DsDevice[]>(
-    () => supabaseGet<DsDevice[]>("ds_devices", "select=*&order=zone_id.asc"),
-    30000
-  );
-  return { devices: data || [], loading, error, lastUpdate, configured };
-}
-
-// ─── useDigitalstromMeters ──────────────────────────────────────────────────
-
-export interface DsMetersResult {
-  meters: DsMeter[];
-  totalConsumption: number;
-  loading: boolean;
-  error: string | null;
-  lastUpdate: Date | null;
-  configured: boolean;
-}
-
-export function useDigitalstromMeters(): DsMetersResult {
-  const { data, loading, error, lastUpdate, configured } = useSupabasePolling<DsMeter[]>(
-    () => supabaseGet<DsMeter[]>("ds_meters", "select=*&order=consumption_w.desc"),
-    30000
-  );
-  const meters = data || [];
-  const totalConsumption = meters.reduce((sum, m) => sum + (m.consumption_w || 0), 0);
-  return { meters, totalConsumption, loading, error, lastUpdate, configured };
-}
-
-// ─── useDigitalstromStatus ──────────────────────────────────────────────────
-
-export interface DsStatusResult {
-  status: DsSystemStatus | null;
-  loading: boolean;
-  error: string | null;
-  configured: boolean;
-}
-
-export function useDigitalstromStatus(): DsStatusResult {
-  const { data, loading, error, configured } = useSupabasePolling<DsSystemStatus>(
-    async () => {
-      const rows = await supabaseGet<DsSystemStatus[]>("ds_system_status", "select=*&id=eq.1");
-      return rows[0] || null;
-    },
-    30000
-  );
-  return { status: data, loading, error, configured };
-}
-
-// ─── Number formatting ──────────────────────────────────────────────────────
-
-export function formatSwissDe(value: number, decimals = 0): string {
-  return new Intl.NumberFormat("de-CH", {
+export function formatSwissDe(value: number, unit: string, decimals = 1): string {
+  return value.toLocaleString("de-CH", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(value);
+  }) + " " + unit;
 }
+
+// ─── Control ─────────────────────────────────────────────────────────────────
+
+export async function callScene(zoneId: number, groupId: number, sceneId: number): Promise<void> {
+  await fetch("/api/dss/scene", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ zoneId, groupId, sceneId }),
+  });
+}
+
+export async function setDeviceOutput(dsuid: string, value: number): Promise<void> {
+  await fetch("/api/dss/device/output", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dsuid, value }),
+  });
+}
+
+// Keep legacy type alias
+export type DssMeter = DsMeter;

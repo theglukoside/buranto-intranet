@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import http from "http";
 import crypto from "crypto";
 import { fetchPorscheData, fetchBmwData, getPorscheCache, getBmwCache } from "./vehicle-api";
+import { getDssCache, dssCallScene, dssSetOutput } from "./dss-api";
 import { getSonosCache, discoverSonos, sonosPlay, sonosPause, sonosNext, sonosPrevious, sonosSetVolume, sonosSetMute } from "./sonos-api";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
@@ -259,6 +260,33 @@ export async function registerRoutes(
       res.json({ reachable });
     } catch {
       res.json({ reachable: false });
+    }
+  });
+
+  // ─── Digitalstrom direkte API ──────────────────────────────────────────────────
+
+  app.get("/api/dss/status", (_req, res) => {
+    const data = getDssCache();
+    res.json(data);
+  });
+
+  app.post("/api/dss/scene", async (req, res) => {
+    const { zoneId, groupId, sceneId } = req.body;
+    try {
+      await dssCallScene(zoneId, groupId, sceneId);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(502).json({ error: e?.message });
+    }
+  });
+
+  app.post("/api/dss/device/output", async (req, res) => {
+    const { dsuid, value } = req.body;
+    try {
+      await dssSetOutput(dsuid, value);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(502).json({ error: e?.message });
     }
   });
 
