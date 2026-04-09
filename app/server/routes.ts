@@ -263,6 +263,102 @@ export async function registerRoutes(
     }
   });
 
+  // ─── DoorBird API ───────────────────────────────────────────────────────────
+  // Proxies requests to the DoorBird device on the LAN.
+  // Credentials stored in api_credentials table (service: 'doorbird').
+
+  async function getDoorBirdCreds(): Promise<{ ip: string; user: string; pass: string } | null> {
+    const cred = await storage.getApiCredential("doorbird");
+    if (!cred) return null;
+    try {
+      const { ip, username, password } = JSON.parse(cred.credentials);
+      if (!ip || !username || !password) return null;
+      return { ip, user: username, pass: password };
+    } catch { return null; }
+  }
+
+  function doorBirdFetch(ip: string, user: string, pass: string, path: string, timeoutMs = 8000): Promise<http.IncomingMessage> {
+    return new Promise((resolve, reject) => {
+      const auth = Buffer.from(`${user}:${pass}`).toString("base64");
+      const url = `http://${ip}${path}`;
+      const req = http.get(url, {
+        timeout: timeoutMs,
+        headers: { Authorization: `Basic ${auth}` },
+      }, (res) => {
+        if (res.statusCode === 401) {
+          res.resume();
+          reject(new Error("Authentifizierung fehlgeschlagen (401)"));
+        } else {
+          resolve(res);
+        }
+      });
+      req.on("error", reject);
+      req.on("timeout", () => { req.destroy(); reject(new Error("DoorBird Timeout")); });
+    });
+  }
+
+  // Live snapshot
+  app.get("/api/doorbird/snapshot", async (_req, res) => {
+    const creds = await getDoorBirdCreds();
+    if (!creds) return res.status(400).json({ message: "DoorBird nicht konfiguriert" });
+    try {
+      const proxyRes = await doorBirdFetch(creds.ip, creds.user, creds.pass, "/bha-api/image.cgi");
+      res.setHeader("Content-Type", proxyRes.headers["content-type"] || "image/jpeg");
+      res.setHeader("Cache-Control", "no-cache, no-store");
+      proxyRes.pipe(res);
+    } catch (e: any) {
+      res.status(502).json({ message: e?.message || "Snapshot nicht verfügbar" });
+    }
+  });
+
+  // Open door (relay)
+  app.post("/api/doorbird/open/:relay", async (req, res) => {
+    const relay = req.params.relay || "1";
+    const creds = await getDoorBirdCreds();
+    if (!creds) return res.status(400).json({ message: "DoorBird nicht konfiguriert" });
+    try {
+      const proxyRes = await doorBirdFetch(creds.ip, creds.user, creds.pass, `/bha-api/open-door.cgi?r=${relay}`);
+      proxyRes.resume();
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(502).json({ message: e?.message || "Tür konnte nicht geöffnet werden" });
+    }
+  });
+
+  // Light on
+  app.post("/api/doorbird/light", async (_req, res) => {
+    const creds = await getDoorBirdCreds();
+    if (!creds) return res.status(400).json({ message: "DoorBird nicht konfiguriert" });
+    try {
+      const proxyRes = await doorBirdFetch(creds.ip, creds.user, creds.pass, "/bha-api/light-on.cgi");
+      proxyRes.resume();
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(502).json({ message: e?.message });
+    }
+  });
+
+  // Device info + ping
+  app.get("/api/doorbird/info", async (_req, res) => {
+    const creds = await getDoorBirdCreds();
+    if (!creds) return res.json({ configured: false });
+    try {
+      const proxyRes = await doorBirdFetch(creds.ip, creds.user, creds.pass, "/bha-api/info.cgi", 5000);
+      let data = "";
+      proxyRes.on("data", (chunk) => (data += chunk));
+      proxyRes.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          res.json({ configured: true, reachable: true, info: json });
+        } catch {
+          res.json({ configured: true, reachable: true });
+        }
+      });
+    } catch (e: any) {
+      res.json({ configured: true, reachable: false, error: e?.message });
+    }
+  });
+
   // ─── Digitalstrom direkte API ──────────────────────────────────────────────────
 
   app.get("/api/dss/status", (_req, res) => {

@@ -6,6 +6,7 @@ import {
   Video,
   BatteryCharging,
   Music,
+  DoorOpen,
   Car,
   CalendarDays,
   FolderOpen,
@@ -34,6 +35,7 @@ const mainItems = [
   { title: "Videoanlage", url: "/videoanlage", icon: Video },
   { title: "Wallbox", url: "/wallbox", icon: BatteryCharging },
   { title: "Sonos", url: "/sonos", icon: Music },
+  { title: "DoorBird", url: "/doorbird", icon: DoorOpen },
   { title: "Fahrzeuge", url: "/fahrzeuge", icon: Car },
 ];
 

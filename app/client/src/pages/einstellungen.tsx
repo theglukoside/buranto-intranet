@@ -219,6 +219,16 @@ const services: ServiceConfig[] = [
     ],
   },
   {
+    service: "doorbird",
+    label: "DoorBird Türklingel",
+    icon: Car,
+    fields: [
+      { key: "ip", label: "IP-Adresse (z.B. 192.168.1.x)", type: "text" },
+      { key: "username", label: "Benutzername", type: "text" },
+      { key: "password", label: "Passwort", type: "password" },
+    ],
+  },
+  {
     service: "porsche-connect",
     label: "Porsche Connect (Taycan & Cayenne)",
     icon: Car,
