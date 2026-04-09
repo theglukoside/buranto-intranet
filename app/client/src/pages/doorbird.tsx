@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   DoorOpen, Camera, Wifi, WifiOff, RefreshCw,
   Settings, Lightbulb, AlertTriangle, CheckCircle, Lock,
+  ExternalLink, Volume2,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -275,6 +276,40 @@ export default function DoorBird() {
                 <span className="text-sm font-semibold text-white">Beleuchtung</span>
               </div>
               <LightButton />
+            </CardContent>
+          </Card>
+
+          {/* Device info */}
+          {/* DoorBird App Deeplinks */}
+          <Card className="bg-[#111] border-[#222]">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-4">
+                <ExternalLink className="h-4 w-4 text-[#FFE600]" />
+                <span className="text-sm font-semibold text-white">DoorBird App</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {/* Live View */}
+                <a
+                  href={deviceInfo?.DEVICE_TYPE
+                    ? `doorbird://live/${info?.info?.BHA?.VERSION?.[0]?.DEVICE_TYPE || ""}`
+                    : "doorbird://"}
+                  className="flex items-center justify-center gap-2 w-full h-10 rounded-md bg-white/5 border border-[#333] text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <Camera className="h-4 w-4" />
+                  Live-Ansicht öffnen
+                </a>
+                {/* Bell / Chime settings */}
+                <a
+                  href="doorbird://"
+                  className="flex items-center justify-center gap-2 w-full h-10 rounded-md bg-white/5 border border-[#333] text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <Volume2 className="h-4 w-4" />
+                  A1061 Glocke konfigurieren
+                </a>
+              </div>
+              <p className="text-[10px] text-gray-600 mt-3">
+                Öffnet die DoorBird App direkt auf dem Gerät
+              </p>
             </CardContent>
           </Card>
 
