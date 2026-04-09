@@ -7,6 +7,7 @@ import {
   BatteryCharging,
   Music,
   DoorOpen,
+  Waves,
   Car,
   CalendarDays,
   FolderOpen,
@@ -36,6 +37,7 @@ const mainItems = [
   { title: "Wallbox", url: "/wallbox", icon: BatteryCharging },
   { title: "Sonos", url: "/sonos", icon: Music },
   { title: "DoorBird", url: "/doorbird", icon: DoorOpen },
+  { title: "Pool", url: "/pool", icon: Waves },
   { title: "Fahrzeuge", url: "/fahrzeuge", icon: Car },
 ];
 

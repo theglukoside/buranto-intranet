@@ -10,6 +10,7 @@ import http from "http";
 import crypto from "crypto";
 import { fetchPorscheData, fetchBmwData, getPorscheCache, getBmwCache } from "./vehicle-api";
 import { getDssCache, dssCallScene, dssSetOutput } from "./dss-api";
+import { fetchPoolStatus, sendPoolCommand, getPoolCache } from "./myfluvo-api";
 import { getSonosCache, discoverSonos, sonosPlay, sonosPause, sonosNext, sonosPrevious, sonosSetVolume, sonosSetMute } from "./sonos-api";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
@@ -275,6 +276,23 @@ export async function registerRoutes(
     } catch {
       res.json({ reachable: false });
     }
+  });
+
+  // ─── Myfluvo Pool API ─────────────────────────────────────────────────────────
+
+  app.get("/api/pool/status", async (_req, res) => {
+    const status = await fetchPoolStatus();
+    res.json(status);
+  });
+
+  app.post("/api/pool/command", async (req, res) => {
+    const { page, params } = req.body;
+    if (!page || !params) return res.status(400).json({ error: "page und params erforderlich" });
+    // Whitelist allowed pages for security
+    const allowed = ["LightDMX.html", "SteuerkastenNT.html", "Frequenzumrichter.html", "LuchsNT.html", "Wandlerbox.html"];
+    if (!allowed.includes(page)) return res.status(400).json({ error: "Nicht erlaubte Seite" });
+    const result = await sendPoolCommand(page, params);
+    res.json(result);
   });
 
   // ─── DoorBird API ───────────────────────────────────────────────────────────

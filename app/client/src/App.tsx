@@ -22,6 +22,7 @@ import Videoanlage from "@/pages/videoanlage";
 import Wallbox from "@/pages/wallbox";
 import Sonos from "@/pages/sonos";
 import DoorBird from "@/pages/doorbird";
+import Pool from "@/pages/pool";
 import Fahrzeuge from "@/pages/fahrzeuge";
 import Termine from "@/pages/termine";
 import Dokumente from "@/pages/dokumente";
@@ -48,6 +49,7 @@ function AppRouter() {
       <Route path="/wallbox" component={Wallbox} />
       <Route path="/sonos" component={Sonos} />
       <Route path="/doorbird" component={DoorBird} />
+      <Route path="/pool" component={Pool} />
       <Route path="/fahrzeuge" component={Fahrzeuge} />
       <Route path="/termine" component={Termine} />
       <Route path="/dokumente" component={Dokumente} />
