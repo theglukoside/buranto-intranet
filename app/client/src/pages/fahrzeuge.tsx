@@ -8,7 +8,35 @@ import {
   Thermometer, Wrench,
 } from "lucide-react";
 import { useOpenWBData } from "@/hooks/use-openwb-data";
-import type { VehicleApiData } from "../../server/vehicle-api";
+// Vehicle data type (mirrored from server/vehicle-api.ts)
+interface VehicleApiData {
+  vin: string;
+  model: string;
+  brand: "PORSCHE" | "BMW" | "MINI";
+  year?: number;
+  color?: string;
+  mileage?: number;
+  fuelLevel?: number;
+  batteryLevel?: number;
+  electricRange?: number;
+  combustionRange?: number;
+  isCharging?: boolean;
+  chargingStatus?: string;
+  remainingChargingTime?: number;
+  chargingPower?: number;
+  doors?: {
+    locked: boolean;
+    frontLeft?: string;
+    frontRight?: string;
+    rearLeft?: string;
+    rearRight?: string;
+    trunk?: string;
+  };
+  location?: { lat: number; lng: number; address?: string };
+  serviceAlerts?: string[];
+  lastUpdated: Date;
+  error?: string;
+}
 import { Link } from "wouter";
 
 // ─── Static vehicle configuration ─────────────────────────────────────────────
