@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
@@ -83,6 +83,20 @@ function AppShell() {
 
 function AuthenticatedApp() {
   const [authenticated, setAuthenticated] = useState(false);
+  const [passwordRequired, setPasswordRequired] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/config")
+      .then((r) => r.json())
+      .then((d) => {
+        setPasswordRequired(d.passwordRequired !== false);
+        if (d.passwordRequired === false) setAuthenticated(true);
+      })
+      .catch(() => setPasswordRequired(true));
+  }, []);
+
+  // Still loading config
+  if (passwordRequired === null) return null;
 
   if (!authenticated) {
     return <Login onLogin={() => setAuthenticated(true)} />;

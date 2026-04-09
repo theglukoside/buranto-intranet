@@ -1,6 +1,6 @@
 import burantoLogoPath from "@assets/buranto-logo.jpg";
 
-// BurantoLogo — renders the actual JPG image for light backgrounds (login page)
+// BurantoLogo — renders the actual JPG logo
 export function BurantoLogo({ width = 200, height }: { width?: number; height?: number }) {
   const computedHeight = height ?? Math.round(width * 0.22);
   return (
@@ -14,47 +14,22 @@ export function BurantoLogo({ width = 200, height }: { width?: number; height?: 
   );
 }
 
-// BurantoLogoSVG — SVG wordmark replica with white text for dark sidebar backgrounds
-// The "O" has a yellow (#FFE600) half-circle accent on its upper-right
+// BurantoLogoSVG — used in the dark sidebar
+// Uses the actual logo image; CSS filter makes it white on dark backgrounds
 export function BurantoLogoSVG({ width = 160 }: { width?: number }) {
-  const height = Math.round(width * 0.28);
+  // The logo JPG is dark text on light background — invert for dark sidebar
   return (
-    <svg
+    <img
+      src={burantoLogoPath}
+      alt="BURANTO"
       width={width}
-      height={height}
-      viewBox="0 0 180 42"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="BURANTO"
-    >
-      {/* BURANT letters in white, wide-tracked geometric bold */}
-      <text
-        x="0"
-        y="32"
-        fontFamily="Montserrat, Arial Black, sans-serif"
-        fontWeight="800"
-        fontSize="28"
-        letterSpacing="4"
-        fill="#FFFFFF"
-      >
-        BURANTO
-      </text>
-      {/* Yellow half-circle accent on the "O" — upper-right arc overlay */}
-      <defs>
-        <clipPath id="o-top-right">
-          <rect x="150" y="4" width="26" height="18" />
-        </clipPath>
-      </defs>
-      <circle
-        cx="161"
-        cy="21"
-        r="12"
-        fill="none"
-        stroke="#FFE600"
-        strokeWidth="4"
-        clipPath="url(#o-top-right)"
-      />
-    </svg>
+      style={{
+        display: "block",
+        objectFit: "contain",
+        filter: "brightness(0) invert(1)",  // White text on dark sidebar
+        height: "auto",
+      }}
+    />
   );
 }
 

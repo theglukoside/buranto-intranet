@@ -32,6 +32,20 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Auth config (password required setting)
+  app.get("/api/auth/config", async (_req, res) => {
+    const val = await storage.getSetting("password_required");
+    // Default: password required (true)
+    const passwordRequired = val === null ? true : val !== "false";
+    res.json({ passwordRequired });
+  });
+
+  app.post("/api/auth/config", async (req, res) => {
+    const { passwordRequired } = req.body;
+    await storage.setSetting("password_required", passwordRequired ? "true" : "false");
+    res.json({ ok: true, passwordRequired });
+  });
+
   // Auth
   app.post("/api/auth/login", async (req, res) => {
     const { password } = req.body;

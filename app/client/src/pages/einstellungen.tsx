@@ -349,6 +349,31 @@ export default function Einstellungen() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
+  // Password-required toggle
+  const { data: authConfig, refetch: refetchAuthConfig } = useQuery({
+    queryKey: ["/api/auth/config"],
+    queryFn: () => fetch("/api/auth/config").then((r) => r.json()),
+  });
+  const passwordRequired = authConfig?.passwordRequired !== false;
+
+  const togglePasswordMutation = useMutation({
+    mutationFn: (required: boolean) =>
+      fetch("/api/auth/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passwordRequired: required }),
+      }).then((r) => r.json()),
+    onSuccess: (_, required) => {
+      refetchAuthConfig();
+      toast({
+        title: required ? "Passwort aktiviert" : "Passwortschutz deaktiviert",
+        description: required
+          ? "Beim nächsten Öffnen wird ein Passwort verlangt."
+          : "Das Intranet ist ohne Passwort zugänglich.",
+      });
+    },
+  });
+
   const changePasswordMutation = useMutation({
     mutationFn: (data: { currentPassword: string; newPassword: string }) =>
       apiRequest("POST", "/api/auth/change-password", data),
@@ -403,6 +428,20 @@ export default function Einstellungen() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Password required toggle */}
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div>
+                <div className="text-sm">Passwortschutz</div>
+                <div className="text-xs text-muted-foreground">
+                  {passwordRequired ? "Anmeldung erforderlich" : "Kein Passwort nötig (intern)"}
+                </div>
+              </div>
+              <Switch
+                checked={passwordRequired}
+                onCheckedChange={(v) => togglePasswordMutation.mutate(v)}
+                disabled={togglePasswordMutation.isPending}
+              />
+            </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Aktuelles Passwort</label>
               <Input
