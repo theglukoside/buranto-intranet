@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, sqlite } from "./storage";
 import { insertEventSchema, insertDocumentSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
@@ -505,6 +505,111 @@ export async function registerRoutes(
     const { username, password, region } = JSON.parse(creds.credentials);
     const cache = await fetchBmwData(username, password, region || "rest_of_world", true);
     res.json({ configured: true, vehicles: cache.data, lastFetch: cache.lastFetch, error: cache.error });
+  });
+
+  // ─── Meetings ──────────────────────────────────────────────────────────────
+
+  app.get("/api/meetings", async (_req, res) => {
+    const meetings = await storage.getMeetings();
+    res.json(meetings);
+  });
+
+  app.post("/api/meetings", async (req, res) => {
+    const { title, date, moderator, minute_keeper, status, notes } = req.body;
+    if (!title || !date) return res.status(400).json({ message: "Titel und Datum erforderlich" });
+    const meeting = await storage.createMeeting({ title, date, moderator: moderator || null, minute_keeper: minute_keeper || null, status: status || 'draft', notes: notes || null });
+    res.json(meeting);
+  });
+
+  app.get("/api/meetings/files/:id/download", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const fileRow = sqlite.prepare(`SELECT * FROM meeting_files WHERE id = ?`).get(id) as any;
+    if (!fileRow) return res.status(404).json({ message: "Datei nicht gefunden" });
+    const filePath = path.join(UPLOADS_DIR, fileRow.filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "Datei nicht gefunden" });
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileRow.original_name)}"`);
+    res.setHeader("Content-Type", fileRow.mime_type || "application/octet-stream");
+    fs.createReadStream(filePath).pipe(res);
+  });
+
+  app.delete("/api/meetings/files/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const file = await storage.deleteMeetingFile(id);
+    if (file) {
+      const filePath = path.join(UPLOADS_DIR, file.filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    res.json({ success: true });
+  });
+
+  app.patch("/api/meetings/items/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const item = await storage.updateMeetingItem(id, req.body);
+    if (!item) return res.status(404).json({ message: "Nicht gefunden" });
+    res.json(item);
+  });
+
+  app.delete("/api/meetings/items/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    await storage.deleteMeetingItem(id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/meetings/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const meeting = await storage.getMeeting(id);
+    if (!meeting) return res.status(404).json({ message: "Nicht gefunden" });
+    const items = await storage.getMeetingItems(id);
+    const files = await storage.getMeetingFiles(id);
+    res.json({ ...meeting, items, files });
+  });
+
+  app.patch("/api/meetings/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const meeting = await storage.updateMeeting(id, req.body);
+    if (!meeting) return res.status(404).json({ message: "Nicht gefunden" });
+    res.json(meeting);
+  });
+
+  app.delete("/api/meetings/:id", async (req, res) => {
+    const id = parseInt(req.params.id);
+    await storage.deleteMeeting(id);
+    res.json({ success: true });
+  });
+
+  app.post("/api/meetings/:id/complete", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const meeting = await storage.updateMeeting(id, { status: 'completed' });
+    if (!meeting) return res.status(404).json({ message: "Nicht gefunden" });
+    res.json(meeting);
+  });
+
+  app.get("/api/meetings/:id/items", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const items = await storage.getMeetingItems(id);
+    res.json(items);
+  });
+
+  app.post("/api/meetings/:id/items", async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { team, category, content, author } = req.body;
+    if (!team || !category || !content) return res.status(400).json({ message: "Team, Kategorie und Inhalt erforderlich" });
+    const item = await storage.createMeetingItem({ meeting_id: id, team, category, content, author: author || null });
+    res.json(item);
+  });
+
+  app.post("/api/meetings/:id/files", upload.single("file"), async (req, res) => {
+    const id = parseInt(req.params["id"] as string);
+    if (!req.file) return res.status(400).json({ message: "Keine Datei" });
+    const item_id = req.body.item_id ? parseInt(String(req.body.item_id)) : null;
+    const file = await storage.createMeetingFile({
+      meeting_id: id,
+      item_id,
+      filename: req.file.filename,
+      original_name: req.file.originalname,
+      mime_type: req.file.mimetype,
+    });
+    res.json(file);
   });
 
   // Settings

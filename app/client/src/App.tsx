@@ -27,6 +27,7 @@ import Fahrzeuge from "@/pages/fahrzeuge";
 import Termine from "@/pages/termine";
 import Dokumente from "@/pages/dokumente";
 import Einstellungen from "@/pages/einstellungen";
+import TeamMeeting from "@/pages/team-meeting";
 import NotFound from "@/pages/not-found";
 
 function ThemeToggle() {
@@ -54,6 +55,8 @@ function AppRouter() {
       <Route path="/termine" component={Termine} />
       <Route path="/dokumente" component={Dokumente} />
       <Route path="/einstellungen" component={Einstellungen} />
+      <Route path="/team-meeting" component={TeamMeeting} />
+      <Route path="/team-meeting/:id" component={TeamMeeting} />
       <Route component={NotFound} />
     </Switch>
   );
