@@ -12,7 +12,6 @@ import {
   CalendarDays,
   FolderOpen,
   Settings,
-  UsersRound,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -40,10 +39,6 @@ const mainItems = [
   { title: "DoorBird", url: "/doorbird", icon: DoorOpen },
   { title: "Pool", url: "/pool", icon: Waves },
   { title: "Fahrzeuge", url: "/fahrzeuge", icon: Car },
-];
-
-const teamItems = [
-  { title: "Team Meeting", url: "/team-meeting", icon: UsersRound },
 ];
 
 const personalItems = [
@@ -77,23 +72,6 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
                     <Link href={item.url} data-testid={`nav-${item.url.replace("/", "") || "home"}`}>
-                      <item.icon className="h-4 w-4" style={{ color: '#FFE600' }} />
-                      <span style={{ color: '#FFE600' }}>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Team</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {teamItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.startsWith(item.url)}>
-                    <Link href={item.url} data-testid={`nav-${item.url.replace("/", "")}`}>
                       <item.icon className="h-4 w-4" style={{ color: '#FFE600' }} />
                       <span style={{ color: '#FFE600' }}>{item.title}</span>
                     </Link>
